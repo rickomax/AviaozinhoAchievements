@@ -210,7 +210,11 @@ int CFG_OpenConfig(const char* cfg_name)
 	char config_dir[MAX_PATH];
 	GetUserConfigDir(config_dir);
 	char config_file[MAX_PATH];
+#ifdef _WIN32
 	snprintf(config_file, MAX_PATH, "%s\\%s", config_dir, cfg_name);
+#else
+	snprintf(config_file, MAX_PATH, "%s/%s", config_dir, cfg_name);
+#endif
 	f = fopen(config_file, "rb");
 	if (f) {
 		fseek(f, 0, SEEK_END);

@@ -194,6 +194,16 @@ typedef mat_t mat4_t[4*4];	//this is bad form, to have an array typedef, as it w
 
 #define MAX_OSPATH	PATH_MAX
 
+#if !defined(MAX_PATH)
+#define MAX_PATH	PATH_MAX
+#endif
+
+#if !defined(_WIN32)
+#define _stricmp	q_strcasecmp
+#define _strnicmp	q_strncasecmp
+#define _malloca	alloca
+#endif
+
 /*==========================================================================*/
 
 /* missing types: */

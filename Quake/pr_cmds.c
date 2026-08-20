@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "quakedef.h"
+#include "Pipe.h"
 
 //#define	STRINGTEMP_BUFFERS		16
 //#define	STRINGTEMP_LENGTH		1024

@@ -1698,7 +1698,9 @@ static int DNSLookupThread(void* vctx)
 qsocket_t* Datagram_CheckNewConnections(void)
 {
 	struct heartbeatctx_s* ctx = heartbeatctx;
+#ifdef _WIN32
 	GNS_MaybeUpdateLobby();
+#endif
 	//only needs to do master stuff now
 	if (sv_public.value > 0)
 	{

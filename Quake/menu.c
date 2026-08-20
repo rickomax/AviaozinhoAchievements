@@ -713,7 +713,7 @@ void M_PrintHighlight(int x, int y, const char* str, const char* search, int sea
 
 	for (i = 0; i < searchlen && match[i]; i++)
 	{
-		Uint32 codepoint = utf8_decode_nth(match, i, strlen);
+		Uint32 codepoint = utf8_decode_nth(match, i, strlen(match));
 		M_DrawCharacter(x + (pos + i) * 8, y, codepoint);
 	}
 
@@ -5984,7 +5984,7 @@ void M_Mouse_Draw(void)
 
 #ifdef MACOS_X_ACCELERATION_HACK
 		case MOUSE_ACCELERATION:
-			text = LOC_GetString("$menu_mouse_acceleration"));
+			text = LOC_GetString("$menu_mouse_acceleration");
 			M_DrawCheckbox(178, y, !in_disablemacosxmouseaccel.value);
 			break;
 #endif

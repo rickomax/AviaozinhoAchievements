@@ -1,7 +1,9 @@
 #include "font.h"
 #include "SDL_ttf.h"
 #include "image.h"
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 UnicodeBlock unicode_blocks[] = {
 	// Línguas latinas
@@ -109,6 +111,7 @@ Uint32 utf8_decode_nth(const char* input,
 	return ' ';
 }
 
+#ifdef _WIN32
 char* to_utf8(const char* str) {
 	if (!str) return NULL;
 
@@ -132,6 +135,14 @@ char* to_utf8(const char* str) {
 
 	return utf8_buf;
 }
+#else
+char* to_utf8(const char* str) {
+	if (!str) return NULL;
+	char* utf8_buf = get_utf8_buffer();
+	q_strlcpy(utf8_buf, str, UTF8_BUFFERLEN);
+	return utf8_buf;
+}
+#endif
 
 
 void get_texture_data(GLuint textureID, SDL_Surface** surface)

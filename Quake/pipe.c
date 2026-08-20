@@ -2,6 +2,8 @@
 
 char pipe_available;
 
+#ifdef _WIN32
+
 HANDLE pipe_handle = INVALID_HANDLE_VALUE;
 char pipe_buffer[PIPE_BUFFER_SIZE];
 DWORD pipe_bytes_read;
@@ -121,3 +123,24 @@ BOOL Pipe_IsConnected(void) {
     }
     return FALSE;
 }
+
+#else /* !_WIN32 */
+
+/* No launcher IPC on this mac or steam yet; achievements/stats calls are no ops. */
+
+pipe_handle_t pipe_handle = NULL;
+char pipe_buffer[PIPE_BUFFER_SIZE];
+pipe_dword_t pipe_bytes_read;
+pipe_dword_t pipe_bytes_written;
+
+pipe_bool_t Pipe_Create(void) { return FALSE; }
+pipe_dword_t Pipe_AvailableBytes(void) { return 0; }
+pipe_bool_t Pipe_ConnectToNew(void) { return FALSE; }
+pipe_bool_t Pipe_ConnectToExisting(void) { return FALSE; }
+pipe_bool_t Pipe_Write(const char *format, ...) { (void)format; return FALSE; }
+pipe_bool_t Pipe_Read(void) { return FALSE; }
+void Pipe_Close(void) {}
+pipe_bool_t Pipe_IsConnected(void) { return FALSE; }
+void Pipe_BeginConnect(void) {}
+
+#endif /* _WIN32 */

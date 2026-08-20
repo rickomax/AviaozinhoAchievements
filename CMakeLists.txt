@@ -16,8 +16,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(NOT WIN32)
-    message(FATAL_ERROR "This CMakeLists is intended for Windows builds.")
+if(NOT WIN32 AND NOT APPLE)
+    message(FATAL_ERROR "This CMakeLists supports Windows and macOS builds.")
+endif()
+
+if(APPLE)
+    enable_language(OBJC)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -40,9 +44,7 @@ else()
     set(QS_DEFAULT_SIGNAL_URL "wss://aviaozinho.duckdns.org/")
 endif()
 
-add_executable(quakespasm WIN32
-    Windows/QuakeSpasm.rc
-
+set(QS_COMMON_SOURCES
     Quake/bgmusic.c
     Quake/cd_sdl.c
     Quake/cfgfile.c
@@ -87,12 +89,7 @@ add_executable(quakespasm WIN32
     Quake/net_dgrm.c
     Quake/net_loop.c
     Quake/net_main.c
-    Quake/net_win.c
-    Quake/net_wins.c
-    Quake/net_wipx.c
-    Quake/net_gns.c
     Quake/pipe.c
-    Quake/pl_win.c
     Quake/pmove.c
     Quake/pmovetst.c
     Quake/pr_cmds.c
@@ -128,14 +125,38 @@ add_executable(quakespasm WIN32
     Quake/sv_move.c
     Quake/sv_phys.c
     Quake/sv_user.c
-    Quake/sys_sdl_win.c
     Quake/tiny-json.c
     Quake/view.c
     Quake/wad.c
     Quake/world.c
     Quake/zone.c
+)
+
+set(QS_WIN_SOURCES
+    Windows/QuakeSpasm.rc
+    Quake/net_win.c
+    Quake/net_wins.c
+    Quake/net_wipx.c
+    Quake/net_gns.c
+    Quake/pl_win.c
+    Quake/sys_sdl_win.c
     Quake/GNSInterface.cpp
 )
+set(QS_MAC_SOURCES
+    Mac/net_bsd.c
+    Mac/net_udp.c
+    Mac/pl_osx.m
+    Mac/sys_sdl_unix.c
+    Mac/main_osx.c
+)
+
+if(WIN32)
+    set(QS_PLATFORM_SOURCES ${QS_WIN_SOURCES})
+elseif(APPLE)
+    set(QS_PLATFORM_SOURCES ${QS_MAC_SOURCES})
+endif()
+
+add_executable(quakespasm WIN32 ${QS_COMMON_SOURCES} ${QS_PLATFORM_SOURCES})
 
 set_target_properties(quakespasm PROPERTIES
     OUTPUT_NAME "AVIAO3GAME"
@@ -146,6 +167,7 @@ set_target_properties(quakespasm PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${QS_RUNTIME_OUTPUT_DIRECTORY}"
 )
 
+if(WIN32)
 if(NOT DEFINED OPENSSL_ROOT_DIR AND DEFINED ENV{OPENSSL_ROOT_DIR})
     set(OPENSSL_ROOT_DIR "$ENV{OPENSSL_ROOT_DIR}")
 endif()
@@ -214,6 +236,7 @@ set(CODECS_X64_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/codecs/x64" CACHE PA
 set(CODECS_X86_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/codecs/x86" CACHE PATH "Path to x86 codec libs/dlls")
 
 set(MISC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/misc/include" CACHE PATH "Path to misc headers")
+endif()
 
 target_include_directories(quakespasm PRIVATE
     Quake
@@ -246,6 +269,137 @@ target_compile_definitions(quakespasm PRIVATE
 if(QS_BDD_PRE_4)
     target_compile_definitions(quakespasm PRIVATE
         BDDPRE4
+    )
+endif()
+
+if(APPLE)
+    find_program(HOMEBREW_EXECUTABLE brew)
+    if(HOMEBREW_EXECUTABLE)
+        function(qs_brew_prefix out_var formula)
+            execute_process(
+                COMMAND brew --prefix ${formula}
+                OUTPUT_VARIABLE _qs_prefix
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            set(${out_var} "${_qs_prefix}" PARENT_SCOPE)
+        endfunction()
+
+        qs_brew_prefix(QS_SDL2_PREFIX sdl2)
+        qs_brew_prefix(QS_SDL2_TTF_PREFIX sdl2_ttf)
+        qs_brew_prefix(QS_FLAC_PREFIX flac)
+        qs_brew_prefix(QS_VORBIS_PREFIX libvorbis)
+        qs_brew_prefix(QS_OPUS_PREFIX opus)
+        qs_brew_prefix(QS_OPUSFILE_PREFIX opusfile)
+        qs_brew_prefix(QS_OGG_PREFIX libogg)
+        qs_brew_prefix(QS_MAD_PREFIX mad)
+        qs_brew_prefix(QS_XMP_PREFIX libxmp)
+        qs_brew_prefix(QS_CURL_PREFIX curl)
+
+        target_include_directories(quakespasm PRIVATE
+            "${QS_SDL2_PREFIX}/include/SDL2"
+            "${QS_SDL2_TTF_PREFIX}/include/SDL2"
+            "${QS_FLAC_PREFIX}/include"
+            "${QS_VORBIS_PREFIX}/include"
+            "${QS_OPUS_PREFIX}/include/opus"
+            "${QS_OPUS_PREFIX}/include"
+            "${QS_OPUSFILE_PREFIX}/include/opus"
+            "${QS_OPUSFILE_PREFIX}/include"
+            "${QS_OGG_PREFIX}/include"
+            "${QS_MAD_PREFIX}/include"
+            "${QS_XMP_PREFIX}/include"
+            "${QS_CURL_PREFIX}/include"
+        )
+
+        target_link_directories(quakespasm PRIVATE
+            "${QS_SDL2_PREFIX}/lib"
+            "${QS_SDL2_TTF_PREFIX}/lib"
+            "${QS_FLAC_PREFIX}/lib"
+            "${QS_VORBIS_PREFIX}/lib"
+            "${QS_OPUS_PREFIX}/lib"
+            "${QS_OPUSFILE_PREFIX}/lib"
+            "${QS_OGG_PREFIX}/lib"
+            "${QS_MAD_PREFIX}/lib"
+            "${QS_XMP_PREFIX}/lib"
+            "${QS_CURL_PREFIX}/lib"
+        )
+    else()
+        target_include_directories(quakespasm PRIVATE
+            "${QS_PREFIX}/include/SDL2"
+            "${QS_PREFIX}/include"
+            "${QS_PREFIX}/include/opus"
+        )
+
+        target_link_directories(quakespasm PRIVATE
+            "${QS_PREFIX}/lib"
+        )
+    endif()
+
+    target_compile_definitions(quakespasm PRIVATE GL_SILENCE_DEPRECATION=1)
+
+    target_link_libraries(quakespasm PRIVATE
+        SDL2
+        SDL2_ttf
+        vorbisfile
+        vorbis
+        ogg
+        opusfile
+        opus
+        FLAC
+        mad
+        xmp
+        curl
+        z
+        "-framework Cocoa"
+        "-framework OpenGL"
+        "-framework IOKit"
+    )
+endif()
+
+if(WIN32)
+    set(LIBDATACHANNEL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/libdatachannel/include" CACHE PATH "Path to libdatachannel headers")
+    set(LIBDATACHANNEL_X64_DEBUG_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/libdatachannel/debug" CACHE PATH "Path to x64 libdatachannel debug libs/dlls")
+    set(LIBDATACHANNEL_X64_RELEASE_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/libdatachannel/release" CACHE PATH "Path to x64 libdatachannel release libs/dlls")
+    set(LIBDATACHANNEL_X86_DEBUG_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/libdatachannel/debug_x86" CACHE PATH "Path to x86 libdatachannel debug libs/dlls")
+    set(LIBDATACHANNEL_X86_RELEASE_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/libdatachannel/release_x86" CACHE PATH "Path to x86 libdatachannel release libs/dlls")
+
+    set(SDL2_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/SDL2/include" CACHE PATH "Path to SDL2 headers")
+    set(SDL2_X64_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/SDL2/lib64" CACHE PATH "Path to x64 SDL2 libs/dlls")
+    set(SDL2_X86_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/SDL2/lib" CACHE PATH "Path to x86 SDL2 libs/dlls")
+
+    set(SDL2_TTF_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/SDL2TTF/include" CACHE PATH "Path to SDL2_ttf headers")
+    set(SDL2_TTF_X64_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/SDL2TTF/Release" CACHE PATH "Path to x64 SDL2_ttf libs/dlls")
+    set(SDL2_TTF_X86_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/SDL2TTF/lib" CACHE PATH "Path to x86 SDL2_ttf libs/dlls")
+
+    set(CODECS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/codecs/include" CACHE PATH "Path to codec headers")
+    set(CODECS_X64_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/codecs/x64" CACHE PATH "Path to x64 codec libs/dlls")
+    set(CODECS_X86_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/codecs/x86" CACHE PATH "Path to x86 codec libs/dlls")
+
+    set(MISC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/misc/include" CACHE PATH "Path to misc headers")
+
+    set(ZLIB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/zlib/include" CACHE PATH "Path to zlib headers")
+    set(ZLIB_X64_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/zlib/x64" CACHE PATH "Path to x64 zlib libs/dlls")
+    set(ZLIB_X86_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/zlib/x86" CACHE PATH "Path to x86 zlib libs/dlls")
+
+    set(CURL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/curl/include" CACHE PATH "Path to curl headers")
+    set(CURL_X64_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/curl/lib/x64" CACHE PATH "Path to x64 curl libs/dlls")
+    set(CURL_X86_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Windows/curl/lib/x86" CACHE PATH "Path to x86 curl libs/dlls")
+
+    target_include_directories(quakespasm PRIVATE
+        "${SDL2_INCLUDE_DIR}"
+        "${SDL2_TTF_INCLUDE_DIR}"
+        "${LIBDATACHANNEL_INCLUDE_DIR}"
+        "${CODECS_INCLUDE_DIR}"
+        "${MISC_INCLUDE_DIR}"
+        "${ZLIB_INCLUDE_DIR}"
+        "${CURL_INCLUDE_DIR}"
+    )
+
+    target_compile_definitions(quakespasm PRIVATE
+        _CRT_NONSTDC_NO_DEPRECATE
+        _CRT_SECURE_NO_WARNINGS
+        _WINSOCK_DEPRECATED_NO_WARNINGS
+        _USE_WINSOCK2
+        USE_SDL2_TTF
     )
 endif()
 
@@ -389,7 +543,7 @@ if(MSVC)
     )
 endif()
 
-if(QS_COPY_RUNTIME_DLLS)
+if(WIN32 AND QS_COPY_RUNTIME_DLLS)
     if(QS_64BIT)
         add_custom_command(TARGET quakespasm POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:quakespasm>"

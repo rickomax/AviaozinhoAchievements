@@ -516,6 +516,8 @@ typedef struct server_alias_s // woods #serveralias
 //avião:
 void GetUserConfigDir(char* config_dir);
 void GetSaveDir(char* save_dir, char* saved_games_dir);
+qboolean Curl_DownloadFile (const char* url, const char* filename, const char* local_path);
+void LOC_LoadFile (const char *file);
 
 extern qboolean horde_map;
 

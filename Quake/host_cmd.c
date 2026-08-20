@@ -32,6 +32,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "json.h" // woods #mapdescriptions
 #ifndef _WIN32
 #include <dirent.h>
+
+#define GNS_PREFIX "steam-conn|"
+
+qboolean validSteamId(const char* address)
+{
+	if (!address) return false;
+	const size_t prefix_len = strlen(GNS_PREFIX);
+	if (strncmp(address, GNS_PREFIX, prefix_len) != 0) return false;
+	const char* p = address + prefix_len;
+	if (*p == '\0' || *p < '0' || *p > '9') return false;
+	while (*p >= '0' && *p <= '9') p++;
+	if (*p == '\0') return true;
+	if (*p != ':') return false;
+	p++;
+	if (*p == '\0') return false;
+	while (*p >= '0' && *p <= '9') p++;
+	return (*p == '\0');
+}
 #endif
 
 extern cvar_t	pausable;
@@ -3124,6 +3142,7 @@ static void Host_Savegame_f(void)
 Gets the user config directory
 ===============
 */
+#ifdef _WIN32
 void GetUserConfigDir(char* config_dir)
 {
 	const char* config_dir_internal = "%APPDATA%\\";
@@ -3131,12 +3150,22 @@ void GetUserConfigDir(char* config_dir)
 	size_t config_dir_len = ExpandEnvironmentStrings(config_dir_internal, config_dir_env, MAX_PATH);
 	snprintf(config_dir, MAX_PATH, "%s%s", config_dir_env, GAMENAMEEX);
 }
+#else
+void GetUserConfigDir(char* config_dir)
+{
+	const char* home_dir = getenv("HOME");
+	if (home_dir == NULL)
+		home_dir = ".";
+	snprintf(config_dir, MAX_PATH, "%s/Library/Application Support/%s", home_dir, GAMENAMEEX);
+}
+#endif
 
 /*
 ===============
 Gets the save game directory
 ===============
 */
+#ifdef _WIN32
 void GetSaveDir(char* save_dir, char* saved_games_dir)
 {
 	const char* saved_games_dir_internal = "%USERPROFILE%\\Saved Games\\";
@@ -3148,6 +3177,19 @@ void GetSaveDir(char* save_dir, char* saved_games_dir)
 	}
 	snprintf(save_dir, MAX_PATH, "%s%s", save_dir_env, GAMENAMEEX);
 }
+#else
+void GetSaveDir(char* save_dir, char* saved_games_dir)
+{
+	const char* home_dir = getenv("HOME");
+	char base[MAX_PATH];
+	if (home_dir == NULL)
+		home_dir = ".";
+	snprintf(base, MAX_PATH, "%s/Library/Application Support/Saved Games/", home_dir);
+	if (saved_games_dir)
+		snprintf(saved_games_dir, MAX_PATH, "%s", base);
+	snprintf(save_dir, MAX_PATH, "%s%s", base, GAMENAMEEX);
+}
+#endif
 
 /*
 ===============
