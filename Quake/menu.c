@@ -14114,10 +14114,18 @@ extern cvar_t steamserver;
 
 // avião
 void GNS_FetchServerList(servertitem_t** items, int* actualServerCount) {
-	Pipe_Write("server_list");
-	if (Pipe_Read()) {
-		populateServersFromJSON(pipe_buffer, items, actualServerCount);
+	struct MemoryStruct response = { NULL, 0 };
+	if (!Pipe_Write("server_list")) return;
+	for (;;) {
+		BOOL complete = Pipe_Read();
+		if (!complete && GetLastError() != ERROR_MORE_DATA) break;
+		if (WriteMemoryCallback(pipe_buffer, 1, pipe_bytes_read, &response) != pipe_bytes_read) break;
+		if (complete) {
+			populateServersFromJSON(response.memory, items, actualServerCount);
+			break;
+		}
 	}
+	free(response.memory);
 }
 
 void FetchAndSortServers(void)
@@ -14368,6 +14376,9 @@ void M_ServerList_Key(int key)
 	case K_KP_ENTER:
 	case K_ABUTTON:
 	enter:
+		if (!serversmenu.items || serversmenu.list.cursor < 0 ||
+			serversmenu.list.cursor >= serversmenu.servercount)
+			break;
 		m_return_state = m_state;
 		m_return_onerror = true;
 		key_dest = key_game;
